@@ -291,7 +291,7 @@
   },
   {
     "name": "Microsoft PowerPoint 97-2003",
-    "extensions": ["ppt"],
+    "extensions": ["ppt","pot"],
     "mediaType": "application/vnd.ms-powerpoint",
     "inputFamily": "PRESENTATION",
     "storeProperties": {
@@ -302,7 +302,7 @@
   },
   {
     "name": "Microsoft PowerPoint 2007-2013 XML",
-    "extensions": ["pptx"],
+    "extensions": ["pptx","potx"],
     "mediaType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "inputFamily": "PRESENTATION",
     "storeProperties": {

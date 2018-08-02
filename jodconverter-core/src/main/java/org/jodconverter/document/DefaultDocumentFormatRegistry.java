@@ -292,6 +292,7 @@ public final class DefaultDocumentFormatRegistry {
    * </ul>
    */
   public static final DocumentFormat PPT = getInstance().getFormatByExtension("ppt");
+  public static final DocumentFormat POT = getInstance().getFormatByExtension("pot");
 
   /**
    * Microsoft PowerPoint 2007-2013 XML.
@@ -302,6 +303,7 @@ public final class DefaultDocumentFormatRegistry {
    * </ul>
    */
   public static final DocumentFormat PPTX = getInstance().getFormatByExtension("pptx");
+  public static final DocumentFormat POTX = getInstance().getFormatByExtension("potx");
 
   /**
    * OpenDocument Drawing.
