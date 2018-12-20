@@ -19,11 +19,13 @@
 
 package org.jodconverter.boot.autoconfigure;
 
+import java.io.InputStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -31,12 +33,19 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ResourceLoader;
 
 import org.jodconverter.DocumentConverter;
 import org.jodconverter.LocalConverter;
+import org.jodconverter.document.DefaultDocumentFormatRegistryInstanceHolder;
+import org.jodconverter.document.DocumentFormatRegistry;
+import org.jodconverter.document.JsonDocumentFormatRegistry;
 import org.jodconverter.office.LocalOfficeManager;
+import org.jodconverter.office.LocalOfficeUtils;
 import org.jodconverter.office.OfficeManager;
+import org.jodconverter.process.ProcessManager;
 
+/** {@link EnableAutoConfiguration Auto-configuration} for JodConverter local module. */
 @Configuration
 @ConditionalOnClass(LocalConverter.class)
 @ConditionalOnProperty(
@@ -55,7 +64,7 @@ public class JodConverterLocalAutoConfiguration {
   }
 
   // Creates the OfficeManager bean.
-  private OfficeManager createOfficeManager() {
+  private OfficeManager createOfficeManager(final ProcessManager processManager) {
 
     final LocalOfficeManager.Builder builder = LocalOfficeManager.builder();
 
@@ -76,24 +85,65 @@ public class JodConverterLocalAutoConfiguration {
     builder.taskExecutionTimeout(properties.getTaskExecutionTimeout());
     builder.maxTasksPerProcess(properties.getMaxTasksPerProcess());
     builder.taskQueueTimeout(properties.getTaskQueueTimeout());
+    final String processManagerClass = properties.getProcessManagerClass();
+    if (StringUtils.isNotEmpty(processManagerClass)) {
+      builder.processManager(processManagerClass);
+    } else {
+      builder.processManager(processManager);
+    }
 
     // Starts the manager
     return builder.build();
   }
 
+  @Bean
+  @ConditionalOnMissingBean(name = "processManager")
+  public ProcessManager processManager() {
+    return LocalOfficeUtils.findBestProcessManager();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(name = "documentFormatRegistry")
+  public DocumentFormatRegistry documentFormatRegistry(final ResourceLoader resourceLoader)
+      throws Exception {
+
+    DocumentFormatRegistry registry = null;
+    if (StringUtils.isBlank(properties.getDocumentFormatRegistry())) {
+      try (InputStream in =
+          resourceLoader.getResource("classpath:document-formats.json").getInputStream()) {
+        registry = JsonDocumentFormatRegistry.create(in, properties.getFormatOptions());
+      }
+    } else {
+      try (InputStream in =
+          resourceLoader.getResource(properties.getDocumentFormatRegistry()).getInputStream()) {
+        registry = JsonDocumentFormatRegistry.create(in, properties.getFormatOptions());
+      }
+    }
+
+    // Set as default.
+    DefaultDocumentFormatRegistryInstanceHolder.setInstance(registry);
+
+    // Return it.
+    return registry;
+  }
+
   @Bean(name = "localOfficeManager", initMethod = "start", destroyMethod = "stop")
   @ConditionalOnMissingBean(name = "localOfficeManager")
-  public OfficeManager localOfficeManager() {
+  public OfficeManager localOfficeManager(final ProcessManager processManager) {
 
-    return createOfficeManager();
+    return createOfficeManager(processManager);
   }
 
   // Must appear after the localOfficeManager bean creation. Do not reorder this class by name.
   @Bean
   @ConditionalOnMissingBean(name = "localDocumentConverter")
-  @ConditionalOnBean(name = "localOfficeManager")
-  public DocumentConverter localDocumentConverter(final OfficeManager localOfficeManager) {
+  @ConditionalOnBean(name = {"localOfficeManager", "documentFormatRegistry"})
+  public DocumentConverter localDocumentConverter(
+      final OfficeManager localOfficeManager, final DocumentFormatRegistry documentFormatRegistry) {
 
-    return LocalConverter.make(localOfficeManager);
+    return LocalConverter.builder()
+        .officeManager(localOfficeManager)
+        .formatRegistry(documentFormatRegistry)
+        .build();
   }
 }

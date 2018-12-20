@@ -41,9 +41,12 @@ import org.jodconverter.office.OnlineOfficeManager;
 @TestPropertySource(locations = "classpath:config/application-props.properties")
 public class AutoConfigurationPropertiesTest {
 
+  @Autowired private JodConverterLocalProperties localProps;
+  @Autowired private JodConverterOnlineProperties onlineProps;
+
   // Provided valid OfficeManager beans so we will be able to test the Autowired properties.
   @TestConfiguration
-  static class TestConfig {
+  /* default */ static class TestConfig {
 
     @Bean
     public OfficeManager localOfficeManager() {
@@ -55,10 +58,6 @@ public class AutoConfigurationPropertiesTest {
       return OnlineOfficeManager.make("some url");
     }
   }
-
-  @Autowired private JodConverterLocalProperties localProps;
-
-  @Autowired private JodConverterOnlineProperties onlineProps;
 
   @Test
   public void testLocalProperties() {
@@ -75,7 +74,8 @@ public class AutoConfigurationPropertiesTest {
             "processRetryInterval",
             "taskExecutionTimeout",
             "maxTasksPerProcess",
-            "taskQueueTimeout")
+            "taskQueueTimeout",
+            "documentFormatRegistry")
         .containsExactly(
             true,
             "office-home",
@@ -87,7 +87,8 @@ public class AutoConfigurationPropertiesTest {
             1000L,
             60000L,
             20,
-            60000L);
+            60000L,
+            "classpath:document-formats.json");
   }
 
   @Test
@@ -115,6 +116,7 @@ public class AutoConfigurationPropertiesTest {
             "ssl.trustStoreType",
             "ssl.trustStoreProvider",
             "ssl.protocol",
+            "ssl.trustAll",
             "ssl.verifyHostname")
         .containsExactly(
             true,
@@ -137,6 +139,7 @@ public class AutoConfigurationPropertiesTest {
             "jks",
             "SUN",
             "TLS",
+            true,
             false);
   }
 }
