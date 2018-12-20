@@ -4,7 +4,7 @@ server:
     max-http-post-size: 125829120
   
 spring:
-  http:
+  servlet:
     multipart:
       max-file-size: 110MB
       max-request-size: 120MB
@@ -19,6 +19,11 @@ jodconverter:
   local:
     enabled: true
     port-numbers: 2002,2003
+    format-options:
+      html:
+        store:
+          TEXT:
+            FilterOptions: EmbedImages
   
 logging:
   level:

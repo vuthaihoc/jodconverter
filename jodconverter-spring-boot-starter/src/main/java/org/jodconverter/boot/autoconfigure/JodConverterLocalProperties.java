@@ -19,7 +19,11 @@
 
 package org.jodconverter.boot.autoconfigure;
 
+import java.util.Map;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import org.jodconverter.document.DocumentFormatProperties;
 
 /** Configuration class for JODConverter. */
 @ConfigurationProperties("jodconverter.local")
@@ -85,6 +89,18 @@ public class JodConverterLocalProperties {
    * if the waiting time is longer than this timeout.
    */
   private long taskQueueTimeout = 30000L;
+
+  /**
+   * Class name for explicit office process manager. Type of the provided process manager. The class
+   * must implement the org.jodconverter.process.ProcessManager interface.
+   */
+  private String processManagerClass;
+
+  /** Path to the registry which contains the document formats that will be supported by default. */
+  private String documentFormatRegistry;
+
+  /** Custom properties required to load(open) and store(save) documents. */
+  private Map<String, DocumentFormatProperties> formatOptions;
 
   public boolean isEnabled() {
     return enabled;
@@ -172,5 +188,29 @@ public class JodConverterLocalProperties {
 
   public void setTaskQueueTimeout(final long taskQueueTimeout) {
     this.taskQueueTimeout = taskQueueTimeout;
+  }
+
+  public String getProcessManagerClass() {
+    return processManagerClass;
+  }
+
+  public void setProcessManagerClass(final String processManagerClass) {
+    this.processManagerClass = processManagerClass;
+  }
+
+  public String getDocumentFormatRegistry() {
+    return documentFormatRegistry;
+  }
+
+  public void setDocumentFormatRegistry(final String documentFormatRegistry) {
+    this.documentFormatRegistry = documentFormatRegistry;
+  }
+
+  public Map<String, DocumentFormatProperties> getFormatOptions() {
+    return formatOptions;
+  }
+
+  public void setFormatOptions(final Map<String, DocumentFormatProperties> formatOptions) {
+    this.formatOptions = formatOptions;
   }
 }

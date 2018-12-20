@@ -19,13 +19,11 @@
 
 package org.jodconverter.document;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Set;
 
 /**
- * Holds the default {@code DocumentFormat} registry. It contains the list of {@code DocumentFormat}
- * that should be enough to cover most of our needs.
+ * Default {@code DocumentFormat} registry. It contains the list of {@code DocumentFormat} that
+ * should be enough to cover most of our needs.
  *
  * <p>See <a
  * href="https://wiki.openoffice.org/wiki/Framework/Article/Filter/FilterList_OOo_3_0">OpenOffice
@@ -386,32 +384,22 @@ public final class DefaultDocumentFormatRegistry {
   public static final DocumentFormat GIF = getInstance().getFormatByExtension("gif");
 
   /**
-   * The InstanceHolder inner class is used to initialize the static INSTANCE on demand (the
-   * instance will be initialized the first time it is used). Working this way allow us to create
-   * (and thus load default document format) the static INSTANCE only if needed.
+   * Windows Bitmap.
+   *
+   * <ul>
+   *   <li>Extension: bmp
+   *   <li>Media Type: image/bmp
+   * </ul>
    */
-  private static class InstanceHolder { // NOSONAR
-    static final DocumentFormatRegistry INSTANCE = create(); // NOSONAR
-
-    private static DocumentFormatRegistry create() {
-
-      try (InputStream input =
-          DefaultDocumentFormatRegistry.class.getResourceAsStream("/document-formats.json")) {
-        return JsonDocumentFormatRegistry.create(input);
-      } catch (IOException ex) {
-        throw new DocumentFormatRegistryException(
-            "Unable to load the default document-formats.json configuration file", ex);
-      }
-    }
-  }
+  public static final DocumentFormat BMP = getInstance().getFormatByExtension("bmp");
 
   /**
    * Gets the default instance of the class.
    *
-   * @return The ResourceManager used at this class hierarchy level.
+   * @return The default DocumentFormatRegistry.
    */
   public static DocumentFormatRegistry getInstance() {
-    return InstanceHolder.INSTANCE;
+    return DefaultDocumentFormatRegistryInstanceHolder.getInstance();
   }
 
   /**

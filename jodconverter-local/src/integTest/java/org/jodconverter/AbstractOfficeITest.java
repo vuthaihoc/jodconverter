@@ -46,7 +46,7 @@ public abstract class AbstractOfficeITest {
   protected static final String TEST_OUTPUT_DIR = "build/integTest-results/";
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractOfficeITest.class);
 
-  void convertFileToAllSupportedFormats(
+  protected void convertFileToAllSupportedFormats(
       final File sourceFile, final File outputDir, final Filter... filters) {
 
     // Detect input format
@@ -72,6 +72,7 @@ public abstract class AbstractOfficeITest {
               inputFormat.getExtension(), "odg", "svg", "fodg", "fodp", "fods", "fodt")
           || StringUtils.equalsAny(
               outputFormat.getExtension(),
+              // Not supported by all office installations
               "png",
               "jpg",
               "jpeg",
@@ -84,7 +85,12 @@ public abstract class AbstractOfficeITest {
               "fodg",
               "fodp",
               "fods",
-              "fodt")) {
+              "fodt",
+              // AOO Cannot save following extension.
+              // See https://forum.openoffice.org/en/forum/viewtopic.php?f=15&t=92508
+              "docx",
+              "xlsx",
+              "pptx")) {
         LOGGER.info(
             "-- skipping {} to {} test... ",
             inputFormat.getExtension(),

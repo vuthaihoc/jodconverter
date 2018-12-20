@@ -33,7 +33,6 @@ import com.sun.star.io.IOException;
 import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.lang.XComponent;
 import com.sun.star.task.ErrorCodeIOException;
-import com.sun.star.uno.UnoRuntime;
 import com.sun.star.util.CloseVetoException;
 import com.sun.star.util.XCloseable;
 
@@ -41,6 +40,7 @@ import org.jodconverter.LocalConverter;
 import org.jodconverter.job.SourceDocumentSpecs;
 import org.jodconverter.office.LocalOfficeContext;
 import org.jodconverter.office.OfficeException;
+import org.jodconverter.office.utils.Lo;
 
 /**
  * Base class for all local office tasks implementation.
@@ -109,14 +109,12 @@ public abstract class AbstractLocalOfficeTask extends AbstractOfficeTask {
       Validate.notNull(document, ERROR_MESSAGE_LOAD + sourceFile.getName());
       return document;
 
-    } catch (IllegalArgumentException illegalArgumentEx) {
-      throw new OfficeException(ERROR_MESSAGE_LOAD + sourceFile.getName(), illegalArgumentEx);
-    } catch (ErrorCodeIOException errorCodeIoEx) {
+    } catch (ErrorCodeIOException exception) {
       throw new OfficeException(
-          ERROR_MESSAGE_LOAD + sourceFile.getName() + "; errorCode: " + errorCodeIoEx.ErrCode,
-          errorCodeIoEx);
-    } catch (IOException ioEx) {
-      throw new OfficeException(ERROR_MESSAGE_LOAD + sourceFile.getName(), ioEx);
+          ERROR_MESSAGE_LOAD + sourceFile.getName() + "; errorCode: " + exception.ErrCode,
+          exception);
+    } catch (IllegalArgumentException | IOException exception) {
+      throw new OfficeException(ERROR_MESSAGE_LOAD + sourceFile.getName(), exception);
     }
   }
 
@@ -127,10 +125,10 @@ public abstract class AbstractLocalOfficeTask extends AbstractOfficeTask {
 
       // Closing the converted document. Use XCloseable.close if the
       // interface is supported, otherwise use XComponent.dispose
-      final XCloseable closeable = UnoRuntime.queryInterface(XCloseable.class, document);
+      final XCloseable closeable = Lo.qi(XCloseable.class, document);
       if (closeable == null) {
         // If close is not supported by this model - try to dispose it.
-        UnoRuntime.queryInterface(XComponent.class, document).dispose();
+        Lo.qi(XComponent.class, document).dispose();
       } else {
         try {
           // The boolean parameter deliverOwnership tells objects vetoing the
@@ -138,7 +136,7 @@ public abstract class AbstractLocalOfficeTask extends AbstractOfficeTask {
           // by throwing a CloseVetoException. Here we give up ownership. To be on
           // the safe side, catch possible veto exception anyway.
           closeable.close(true);
-        } catch (CloseVetoException closeVetoEx) { // NOSONAR
+        } catch (CloseVetoException closeVetoEx) {
           // whoever raised the veto should close the document
         }
       }

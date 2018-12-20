@@ -18,6 +18,7 @@
  */
 
 /**
- * This package contains the interfaces/classes related to the tasks an office process can execute.
+ * This package provides the main converter of the JodConverter local module and a useful static
+ * converter for one-liner conversion tasks.
  */
 package org.jodconverter;

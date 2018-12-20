@@ -22,9 +22,9 @@ package org.jodconverter.boot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -33,13 +33,17 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import org.jodconverter.DocumentConverter;
+import org.jodconverter.document.DocumentFamily;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 @TestPropertySource(locations = "classpath:config/application-local.properties")
 public class LocalConverterITest {
 
@@ -58,7 +62,7 @@ public class LocalConverterITest {
   public static void setUpClass() throws IOException {
 
     inputFileTxt = testFolder.newFile("inputFile.txt");
-    try (final PrintWriter writer = new PrintWriter(new FileWriter(inputFileTxt))) {
+    try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(inputFileTxt.toPath()))) {
       writer.println("This is the first line of the input file.");
       writer.println("This is the second line of the input file.");
     }
@@ -89,18 +93,6 @@ public class LocalConverterITest {
   }
 
   @Test
-  public void testTxtToDocx() throws Exception {
-
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.docx");
-    converter.convert(inputFileTxt).to(outputFile).execute();
-
-    assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
-    assertThat(outputFile.length())
-        .as("Check %s file length", outputFile.getName())
-        .isGreaterThan(0L);
-  }
-
-  @Test
   public void testTxtToPdf() throws Exception {
 
     final File outputFile = new File(testFolder.getRoot(), "outputFile.pdf");
@@ -110,5 +102,44 @@ public class LocalConverterITest {
     assertThat(outputFile.length())
         .as("Check %s file length", outputFile.getName())
         .isGreaterThan(0L);
+  }
+
+  @Test
+  public void testTxtToHtml() throws Exception {
+
+    final File outputDir = new File(testFolder.getRoot(), "html");
+    outputDir.mkdirs();
+    final File outputFile = new File(outputDir, "outputFile.html");
+    final File inputFile = new File("src/integTest/resources/documents/test1.doc");
+
+    converter.convert(inputFile).to(outputFile).execute();
+
+    assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
+    // Check that the EmbedImages option has been applied
+    assertThat(outputDir.list().length)
+        .as("Check %s file EmbedImages", outputFile.getName())
+        .isEqualTo(1);
+  }
+
+  /** Test custom properties. */
+  @Test
+  public void testCustomProperties() throws IOException {
+
+    assertThat(
+            converter
+                .getFormatRegistry()
+                .getFormatByExtension("txt")
+                .getLoadProperties()
+                .get("FilterOptions"))
+        .isEqualTo("utf16");
+
+    assertThat(
+            converter
+                .getFormatRegistry()
+                .getFormatByExtension("txt")
+                .getStoreProperties()
+                .get(DocumentFamily.TEXT)
+                .get("FilterOptions"))
+        .isEqualTo("utf16");
   }
 }

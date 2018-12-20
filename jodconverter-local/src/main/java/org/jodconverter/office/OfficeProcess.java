@@ -29,9 +29,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.jodconverter.process.LinesPumpStreamHandler;
 import org.jodconverter.process.ProcessManager;
 import org.jodconverter.process.ProcessQuery;
 
@@ -42,7 +44,8 @@ class OfficeProcess {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(OfficeProcess.class);
 
-  private Process process;
+  private VerboseProcess process;
+  private OfficeDescriptor descriptor;
   private long pid = PID_UNKNOWN;
   private final OfficeUrl officeUrl;
   private final OfficeProcessConfig config;
@@ -134,6 +137,56 @@ class OfficeProcess {
     }
   }
 
+  private void detectOfficeVersion() {
+
+    // Create the command used to launch the office process
+    final List<String> command = new ArrayList<>();
+    final File executable = LocalOfficeUtils.getOfficeExecutable(config.getOfficeHome());
+    if (config.getRunAsArgs() != null) {
+      command.addAll(Arrays.asList(config.getRunAsArgs()));
+    }
+
+    final String execPath = executable.getAbsolutePath();
+
+    descriptor = OfficeDescriptor.fromExecutablePath(execPath);
+
+    // On windows, we can't try the help option.
+    // See https://bugs.documentfoundation.org/show_bug.cgi?id=100826
+    if (SystemUtils.IS_OS_WINDOWS) {
+      return;
+    }
+
+    final String prefix = descriptor.useLongOptionNameGnuStyle() ? "--" : "-";
+
+    command.add(execPath);
+    command.add(prefix + "invisible");
+    command.add(prefix + "help");
+    command.add(prefix + "headless");
+    command.add(prefix + "nocrashreport");
+    command.add(prefix + "nodefault");
+    command.add(prefix + "nofirststartwizard");
+    command.add(prefix + "nolockcheck");
+    command.add(prefix + "nologo");
+    command.add(prefix + "norestore");
+    command.add("-env:UserInstallation=" + LocalOfficeUtils.toUrl(instanceProfileDir));
+    final ProcessBuilder processBuilder = new ProcessBuilder(command);
+    try {
+      final Process process = processBuilder.start();
+      final LinesPumpStreamHandler handler =
+          new LinesPumpStreamHandler(process.getInputStream(), process.getErrorStream());
+      handler.start();
+      try {
+        process.waitFor();
+        handler.stop();
+      } catch (InterruptedException ex) {
+        // Ignore
+      }
+      descriptor = OfficeDescriptor.fromHelpOutput(handler.getOutputPumper().getLines());
+    } catch (IOException ioEx) {
+      LOGGER.warn("An I/O error prevents us to determine office version", ioEx);
+    }
+  }
+
   /**
    * Kills the office process instance.
    *
@@ -157,7 +210,7 @@ class OfficeProcess {
 
     try {
       // No need to terminate anything if the process has never been started
-      config.getProcessManager().kill(process, pid);
+      config.getProcessManager().kill(process.getProcess(), pid);
       return getExitCode(retryInterval, retryTimeout);
     } catch (IOException ioEx) {
       throw new OfficeException("Unable to kill the process with pid: " + pid, ioEx);
@@ -167,17 +220,17 @@ class OfficeProcess {
   /**
    * Gets the exit code of the office process.
    *
-   * @return The exit value of the process. The value 0 indicates normal termination.
+   * @return The exit value of the process. The value 0 indicates normal termination. If the process
+   *     is not yet terminated, {@code null} is returned.
    */
   public Integer getExitCode() {
 
-    try {
-      // If the process has never been started, just return a success exit code
-      return process == null ? 0 : process.exitValue();
-    } catch (IllegalThreadStateException illegalThreadStateEx) {
-      LOGGER.trace("IllegalThreadStateException catch in getExitCode", illegalThreadStateEx);
-      return null;
+    // If the process has never been started, just return a success exit code
+    if (process == null) {
+      return 0; // success
     }
+
+    return process.getExitCode();
   }
 
   /**
@@ -274,17 +327,19 @@ class OfficeProcess {
     // Apache OpenOffice:
     // https://wiki.openoffice.org/wiki/Framework/Article/Command_Line_Arguments
 
-    command.add(executable.getAbsolutePath());
-    command.add("-accept=" + acceptString);
+    final String execPath = executable.getAbsolutePath();
+    final String prefix = descriptor.useLongOptionNameGnuStyle() ? "--" : "-";
+    command.add(execPath);
+    command.add(prefix + "accept=" + acceptString);
+    command.add(prefix + "headless");
+    command.add(prefix + "invisible");
+    command.add(prefix + "nocrashreport");
+    command.add(prefix + "nodefault");
+    command.add(prefix + "nofirststartwizard");
+    command.add(prefix + "nolockcheck");
+    command.add(prefix + "nologo");
+    command.add(prefix + "norestore");
     command.add("-env:UserInstallation=" + LocalOfficeUtils.toUrl(instanceProfileDir));
-    command.add("-invisible");
-    command.add("-norestore");
-    command.add("-nofirststartwizard");
-    command.add("-nologo");
-    command.add("-nodefault");
-    command.add("-nolockcheck");
-    command.add("-headless");
-    command.add("-nocrashreport");
 
     // It could be interesting to use the LibreOffice pidfile switch
     // to retrieve the LibreOffice pid. But is it reliable ? And it would
@@ -330,6 +385,9 @@ class OfficeProcess {
       prepareInstanceProfileDir();
     }
 
+    // Determiner office version
+    detectOfficeVersion();
+
     // Create the builder used to launch the office process
     final ProcessBuilder processBuilder = prepareProcessBuilder(acceptString);
 
@@ -339,7 +397,7 @@ class OfficeProcess {
         acceptString,
         instanceProfileDir);
     try {
-      process = processBuilder.start();
+      process = new VerboseProcess(processBuilder.start());
       pid = config.getProcessManager().findPid(processQuery);
       LOGGER.info("Started process{}", pid == PID_UNKNOWN ? "" : "; pid = " + pid);
     } catch (IOException ioEx) {
