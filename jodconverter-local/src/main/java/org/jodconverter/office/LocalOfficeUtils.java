@@ -38,6 +38,7 @@ import com.sun.star.lang.XServiceInfo;
 
 import org.jodconverter.document.DocumentFamily;
 import org.jodconverter.office.utils.Lo;
+import org.jodconverter.process.FreeBSDProcessManager;
 import org.jodconverter.process.MacProcessManager;
 import org.jodconverter.process.ProcessManager;
 import org.jodconverter.process.PureJavaProcessManager;
@@ -114,6 +115,8 @@ public final class LocalOfficeUtils {
                 EXECUTABLE_DEFAULT,
                 "/usr/lib64/libreoffice",
                 "/usr/lib/libreoffice",
+                "/usr/local/lib64/libreoffice",
+                "/usr/local/lib/libreoffice",
                 "/opt/libreoffice",
                 "/usr/lib64/openoffice",
                 "/usr/lib64/openoffice.org3",
@@ -146,6 +149,8 @@ public final class LocalOfficeUtils {
 
     if (SystemUtils.IS_OS_MAC) {
       return MacProcessManager.getDefault();
+    } else if (SystemUtils.IS_OS_FREE_BSD) {
+      return FreeBSDProcessManager.getDefault();
     } else if (SystemUtils.IS_OS_UNIX) {
       return UnixProcessManager.getDefault();
     } else if (SystemUtils.IS_OS_WINDOWS) {
