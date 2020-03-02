@@ -1,15 +1,21 @@
-description = 'JODConverter - Spring Boot Starter'
+import org.jodconverter.Deps
+
+ext.moduleName = 'JODConverter Spring Boot Starter'
+description = 'Spring Boot integration module of the Java OpenDocument Converter (JODConverter) project.'
 
 dependencies {
-  compileOnly project(':jodconverter-local')
-  compileOnly project(':jodconverter-online')
-  compileOnly libraries.spring_boot_configuration_processor
-  
-  compile libraries.spring_boot_starter
+    compileOnly project(":jodconverter-local")
+    compileOnly project(":jodconverter-remote")
 
-  testCompile libraries.wiremock
-  testCompile libraries.spring_boot_starter_test
-  
-  testCompileOnly project(':jodconverter-local')
-  testCompileOnly project(':jodconverter-online')
+    compileOnly Deps.springBootConfigurationProcessor
+
+    implementation Deps.springBootStarter
+    implementation Deps.commonsLang
+
+    testImplementation project(":jodconverter-local")
+    testImplementation project(":jodconverter-remote")
+
+    testImplementation Deps.commonsIo
+    testImplementation Deps.wiremock
+    testImplementation Deps.springBootStarterTest
 }

@@ -1,17 +1,24 @@
-description = 'JODConverter - Core'
+import org.jodconverter.Deps
+
+ext.moduleName = 'JODConverter Core'
+description = 'Core JODConverter abstractions, used by JODConverter implementations, such as JODConverter Local or JODConverter Remote, used to convert office documents using LibreOffice or Apache OpenOffice.'
 
 dependencies {
-  compile libraries.commons_io
-  compile libraries.commons_lang3
-  compile libraries.gson
-  compile libraries.slf4j_api
-  
-  testCompile libraries.slf4j_log4j
+    implementation Deps.commonsIo
+    implementation Deps.commonsLang
+    implementation Deps.gson
+    implementation Deps.slf4jApi
+
+    testRuntimeOnly Deps.slf4jLog4j
+
+    // We still need junit 4 for powermock until the following issue is resolved.
+    // https://github.com/powermock/powermock/issues/830
+    testRuntimeOnly Deps.junitVintageEngine
+    testImplementation Deps.powermockJunit
+    testImplementation Deps.powermockMockito
 }
 
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Tests setup
+// --- test setup -----------------------------------------------------------
 
 // Configuration groups used to manage tests dependencies
 // (when test classes depend on test classes from another project)
@@ -20,9 +27,9 @@ configurations {
     tests
 }
 
-task testJar (type: Jar) {
+task testJar(type: Jar) {
     from sourceSets.test.output
-    classifier = 'test'
+    archiveClassifier.set("test")
 }
 
 artifacts {

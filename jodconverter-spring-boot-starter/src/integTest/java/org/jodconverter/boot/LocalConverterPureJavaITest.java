@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -21,80 +21,36 @@ package org.jodconverter.boot;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
 
-import org.jodconverter.DocumentConverter;
+import org.jodconverter.local.office.LocalOfficeManager;
+import org.jodconverter.local.process.PureJavaProcessManager;
 
-@RunWith(SpringRunner.class)
+/** Tests that we can use a configured process manager. */
 @SpringBootTest
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 @TestPropertySource(locations = "classpath:config/application-local-purejava.properties")
 public class LocalConverterPureJavaITest {
 
-  @ClassRule public static TemporaryFolder testFolder = new TemporaryFolder();
-
-  private static File inputFileTxt;
-
-  @Autowired private DocumentConverter converter;
-
-  @BeforeClass
-  public static void setUpClass() throws IOException {
-
-    inputFileTxt = testFolder.newFile("inputFile.txt");
-    try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(inputFileTxt.toPath()))) {
-      writer.println("This is the first line of the input file.");
-      writer.println("This is the second line of the input file.");
-    }
-  }
+  @Autowired private LocalOfficeManager manager;
 
   @Test
-  public void testTxtToRtf() throws Exception {
+  public void testProcessManagerProperty() {
 
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.rtf");
-    converter.convert(inputFileTxt).to(outputFile).execute();
-
-    assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
-    assertThat(outputFile.length())
-        .as("Check %s file length", outputFile.getName())
-        .isGreaterThan(0L);
-  }
-
-  @Test
-  public void testTxtToDoc() throws Exception {
-
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.doc");
-    converter.convert(inputFileTxt).to(outputFile).execute();
-
-    assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
-    assertThat(outputFile.length())
-        .as("Check %s file length", outputFile.getName())
-        .isGreaterThan(0L);
-  }
-
-  @Test
-  public void testTxtToPdf() throws Exception {
-
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.pdf");
-    converter.convert(inputFileTxt).to(outputFile).execute();
-
-    assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
-    assertThat(outputFile.length())
-        .as("Check %s file length", outputFile.getName())
-        .isGreaterThan(0L);
+    assertThat(manager)
+        .extracting("entries")
+        .asList()
+        .hasSize(1)
+        .element(0)
+        .satisfies(
+            o ->
+                assertThat(o)
+                    .extracting("officeProcessManager.process.processManager")
+                    .isExactlyInstanceOf(PureJavaProcessManager.class));
   }
 }

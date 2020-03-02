@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -20,10 +20,10 @@
 package org.jodconverter.sample.webapp;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
+import java.nio.file.Files;
+import java.util.Objects;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -38,15 +38,16 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.jodconverter.DocumentConverter;
+import org.jodconverter.core.DocumentConverter;
 
+/** Converter servlet. */
 public class ConverterServlet extends HttpServlet {
   private static final long serialVersionUID = -591469426224201748L;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConverterServlet.class);
 
   @Override
-  public void init() throws ServletException {
+  public void init() {
     LOGGER.info("Servlet {} has started", this.getServletName());
   }
 
@@ -79,23 +80,29 @@ public class ConverterServlet extends HttpServlet {
 
     final String baseName = FilenameUtils.getBaseName(uploadedFile.getName());
     final File inputFile = File.createTempFile(baseName, "." + inputExtension);
+    FileUtils.deleteQuietly(inputFile);
     writeUploadedFile(uploadedFile, inputFile);
 
     final String outputExtension = FilenameUtils.getExtension(request.getRequestURI());
     final File outputFile = File.createTempFile(baseName, "." + outputExtension);
+    FileUtils.deleteQuietly(outputFile);
     try {
       final DocumentConverter converter = webappContext.getDocumentConverter();
       final long startTime = System.currentTimeMillis();
       converter.convert(inputFile).to(outputFile).execute();
-      LOGGER.info(
-          String.format(
-              "Successful conversion: %s [%db] to %s in %dms",
-              inputExtension,
-              inputFile.length(),
-              outputExtension,
-              System.currentTimeMillis() - startTime));
+      if (LOGGER.isInfoEnabled()) {
+        LOGGER.info(
+            String.format(
+                "Successful conversion: %s [%db] to %s in %dms",
+                inputExtension,
+                inputFile.length(),
+                outputExtension,
+                System.currentTimeMillis() - startTime));
+      }
       response.setContentType(
-          converter.getFormatRegistry().getFormatByExtension(outputExtension).getMediaType());
+          Objects.requireNonNull(
+                  converter.getFormatRegistry().getFormatByExtension(outputExtension))
+              .getMediaType());
       response.setHeader(
           "Content-Disposition", "attachment; filename=" + baseName + "." + outputExtension);
       sendFile(outputFile, response);
@@ -114,7 +121,7 @@ public class ConverterServlet extends HttpServlet {
   private void sendFile(final File file, final HttpServletResponse response) throws IOException {
 
     response.setContentLength((int) file.length());
-    try (InputStream inputStream = new FileInputStream(file)) {
+    try (InputStream inputStream = Files.newInputStream(file.toPath())) {
       IOUtils.copy(inputStream, response.getOutputStream());
     }
   }
@@ -134,9 +141,7 @@ public class ConverterServlet extends HttpServlet {
       final ServletFileUpload fileUpload, final HttpServletRequest request)
       throws FileUploadException {
 
-    return fileUpload
-        .parseRequest(request)
-        .stream()
+    return fileUpload.parseRequest(request).stream()
         .filter(fileItem -> !fileItem.isFormField())
         .findFirst()
         .orElse(null);

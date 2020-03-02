@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -29,8 +29,8 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 
-import org.jodconverter.DocumentConverter;
-import org.jodconverter.office.OfficeException;
+import org.jodconverter.core.DocumentConverter;
+import org.jodconverter.core.office.OfficeException;
 
 /**
  * Converts document(s) according to the command line given to the {@link Convert} class.
@@ -49,7 +49,7 @@ public final class CliConverter {
    */
   public CliConverter(final DocumentConverter converter) {
 
-    this.out = new PrintWriter(System.out); // NOSONAR
+    this.out = new PrintWriter(System.out);
     this.converter = converter;
   }
 
@@ -61,7 +61,8 @@ public final class CliConverter {
    * @param outputDirPath The directory where to create a converted file. If null, a converted file
    *     will be created into the same directory as the input file.
    * @param overwrite Indicates whether an output file that already exists must be overwritten.
-   * @throws OfficeException If an error occurs while converting the files.
+   * @throws org.jodconverter.core.office.OfficeException If an error occurs while converting the
+   *     files.
    */
   public void convert(
       final String[] filenames,
@@ -70,8 +71,8 @@ public final class CliConverter {
       final boolean overwrite)
       throws OfficeException {
 
-    Validate.notEmpty(filenames, "The validated filenames array is empty");
-    Validate.notEmpty(outputFormat, "The validated output format is empty");
+    Validate.notEmpty(filenames, "filenames must not be null nor empty");
+    Validate.notEmpty(outputFormat, "outputFormat must not be null nor empty");
 
     // Prepare the output directory
     final File outputDir = outputDirPath == null ? null : new File(outputDirPath);
@@ -103,14 +104,16 @@ public final class CliConverter {
           final String wildcard = FilenameUtils.getBaseName(filename);
           final File[] files =
               inputFileParent.listFiles((FileFilter) new WildcardFileFilter(wildcard));
-          for (final File file : files) {
+          if (files != null) {
+            for (final File file : files) {
 
-            // Convert the file
-            convertFile(
-                file,
-                outputDir == null ? inputFile.getParentFile() : outputDir,
-                FilenameUtils.getBaseName(file.getName()) + "." + outputFormat,
-                overwrite);
+              // Convert the file
+              convertFile(
+                  file,
+                  outputDir == null ? inputFile.getParentFile() : outputDir,
+                  FilenameUtils.getBaseName(file.getName()) + "." + outputFormat,
+                  overwrite);
+            }
           }
         } else {
           printInfo("Skipping filename '%s' since it doesn't match an existing file...", inputFile);
@@ -128,7 +131,8 @@ public final class CliConverter {
    *     output filename. If null and the directory is not specified in the output filename, a
    *     converted file will be created into the same directory as the input files.
    * @param overwrite Indicates whether an output file that already exists must be overwritten.
-   * @throws OfficeException If an error occurs while converting the files.
+   * @throws org.jodconverter.core.office.OfficeException If an error occurs while converting the
+   *     files.
    */
   public void convert(
       final String[] inputFilenames,
@@ -137,8 +141,8 @@ public final class CliConverter {
       final boolean overwrite)
       throws OfficeException {
 
-    Validate.notEmpty(inputFilenames, "The validated input filenames array is empty");
-    Validate.notEmpty(outputFilenames, "The validated output filenames array is empty");
+    Validate.notEmpty(inputFilenames, "inputFilenames must not be null nor empty");
+    Validate.notEmpty(outputFilenames, "outputFilenames must not be null nor empty");
 
     final int inputLength = inputFilenames.length;
     final int outputLength = outputFilenames.length;
@@ -164,10 +168,8 @@ public final class CliConverter {
       final String outputFullPath = FilenameUtils.getFullPath(outputFilename);
       final File outputDirectory =
           StringUtils.isBlank(outputFullPath)
-              ? outputDir == null // NOSONAR
-                  ? StringUtils.isBlank(inputFullPath) // NOSONAR
-                      ? new File(".")
-                      : new File(inputFullPath)
+              ? outputDir == null
+                  ? StringUtils.isBlank(inputFullPath) ? new File(".") : new File(inputFullPath)
                   : outputDir
               : new File(outputFullPath);
 
@@ -224,6 +226,7 @@ public final class CliConverter {
 
         } else {
           // Create the output directory
+          //noinspection ResultOfMethodCallIgnored
           outputDir.mkdirs();
         }
 

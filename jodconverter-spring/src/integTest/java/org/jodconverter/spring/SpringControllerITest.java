@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -26,26 +26,25 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import org.jodconverter.office.LocalOfficeUtils;
+import org.jodconverter.core.office.OfficeException;
 
+/** Contains tests for the {@link JodConverterBean} class. */
 @ContextConfiguration
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 public class SpringControllerITest {
 
-  private static File inputFileTxt;
-
-  @ClassRule public static TemporaryFolder testFolder = new TemporaryFolder();
+  /* default */ @TempDir File testFolder;
+  private File inputFileTxt;
 
   @Autowired private JodConverterBean bean;
 
@@ -54,28 +53,19 @@ public class SpringControllerITest {
 
     // this bean will be injected into the SpringControllerTest class
     @Bean
-    public JodConverterBean springJodConverter() {
+    /* default */ JodConverterBean springJodConverter() {
 
       final JodConverterBean bean = new JodConverterBean();
       bean.setPortNumbers("2005");
-      bean.setOfficeHome(LocalOfficeUtils.getDefaultOfficeHome().getPath());
-      bean.setWorkingDir(null);
-      bean.setTemplateProfileDir(null);
-      bean.setKillExistingProcess(true);
-      bean.setProcessRetryInterval(1000L);
-      bean.setProcessTimeout(60000L);
-      bean.setMaxTasksPerProcess(20);
-      bean.setTaskExecutionTimeout(60000L);
-      bean.setTaskQueueTimeout(60000L);
 
       return bean;
     }
   }
 
-  @BeforeClass
-  public static void setUpClass() throws IOException {
+  @BeforeEach
+  public void setUp() throws IOException {
 
-    inputFileTxt = testFolder.newFile("inputFile.txt");
+    inputFileTxt = new File(testFolder, "inputFile.txt");
     try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(inputFileTxt.toPath()))) {
       writer.println("This is the first line of the input file.");
       writer.println("This is the second line of the input file.");
@@ -83,9 +73,9 @@ public class SpringControllerITest {
   }
 
   @Test
-  public void testTxtToRtf() throws Exception {
+  public void testTxtToRtf() throws OfficeException {
 
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.rtf");
+    final File outputFile = new File(testFolder, "outputFile.rtf");
     bean.getConverter().convert(inputFileTxt).to(outputFile).execute();
 
     assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
@@ -95,9 +85,9 @@ public class SpringControllerITest {
   }
 
   @Test
-  public void testTxtToDoc() throws Exception {
+  public void testTxtToDoc() throws OfficeException {
 
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.doc");
+    final File outputFile = new File(testFolder, "outputFile.doc");
     bean.getConverter().convert(inputFileTxt).to(outputFile).execute();
 
     assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
@@ -107,9 +97,9 @@ public class SpringControllerITest {
   }
 
   @Test
-  public void testTxtToPdf() throws Exception {
+  public void testTxtToPdf() throws OfficeException {
 
-    final File outputFile = new File(testFolder.getRoot(), "outputFile.pdf");
+    final File outputFile = new File(testFolder, "outputFile.pdf");
     bean.getConverter().convert(inputFileTxt).to(outputFile).execute();
 
     assertThat(outputFile).as("Check %s file creation", outputFile.getName()).isFile();
@@ -119,7 +109,7 @@ public class SpringControllerITest {
   }
 
   @Test
-  public void testLogAvailableFormats() throws Exception {
+  public void testLogAvailableFormats() {
 
     bean.logAvailableFormats();
   }

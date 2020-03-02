@@ -1,28 +1,54 @@
-description = 'JODConverter - Local'
+import org.jodconverter.Deps
+
+ext.moduleName = 'JODConverter Local'
+ext.moduleDescription = 'Module required in order to process local conversions for the Java OpenDocument Converter (JODConverter) project.'
 
 dependencies {
-  compile project(':jodconverter-core')
+    api project(":jodconverter-core")
 
-  if (project.hasProperty("useLibreOffice")) {
-    compile "org.libreoffice:juh:$versions.libre_office_version"
-    compile "org.libreoffice:jurt:$versions.libre_office_version"
-    compile "org.libreoffice:ridl:$versions.libre_office_version"
-    compile "org.libreoffice:unoil:$versions.libre_office_version"  
-  } else {
-    compile "org.openoffice:juh:$versions.open_office_version"
-    compile "org.openoffice:jurt:$versions.open_office_version"
-    compile "org.openoffice:ridl:$versions.open_office_version"
-    compile "org.openoffice:unoil:$versions.open_office_version"
-  }
+    // We cannot use LibreOffice libraries by default.
+    // See:
+    // https://github.com/sbraconnier/jodconverter/issues/113
+//    if (project.hasProperty("useOpenOffice")) {
+//        api Deps.ooJuh
+//        api Deps.ooJurt
+//        api Deps.ooRidl
+//        api Deps.ooUnoil
+//    } else {
+//        api Deps.loJuh
+//        api Deps.loJurt
+//        api Deps.loRidl
+//        api Deps.loUnoil
+//    }
+    if (project.hasProperty("useLibreOffice")) {
+        api Deps.loJuh
+        api Deps.loJurt
+        api Deps.loRidl
+        api Deps.loUnoil
+    } else {
+        api Deps.ooJuh
+        api Deps.ooJurt
+        api Deps.ooRidl
+        api Deps.ooUnoil
+    }
 
-  compile libraries.slf4j_api
+    implementation Deps.commonsIo
+    implementation Deps.commonsLang
+    implementation Deps.slf4jApi
 
-  testCompile libraries.slf4j_log4j
-  testCompile project(path: ':jodconverter-core', configuration: 'tests')
+    testImplementation Deps.slf4jLog4j
+    testImplementation project(path: ":jodconverter-core", configuration: "tests")
+
+    // We still need junit 4 for powermock until the following issue is resolved.
+    // https://github.com/powermock/powermock/issues/830
+    //testImplementation libraries.junit
+    testRuntimeOnly Deps.junitVintageEngine
+    testImplementation Deps.powermockJunit
+    testImplementation Deps.powermockMockito
 }
 
-integrationTest {
-  // Run the stress and performance tests manually only
-  exclude 'org/jodconverter/StressITest.class'
-  exclude 'org/jodconverter/PerformanceITest.class'
+integTest {
+    // Run the stress and performance tests manually only
+    exclude "org/jodconverter/local/StressITest.class"
+    exclude "org/jodconverter/local/PerformanceITest.class"
 }

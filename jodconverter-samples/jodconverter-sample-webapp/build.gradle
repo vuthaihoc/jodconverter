@@ -1,45 +1,43 @@
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+    id 'war'
+    id 'com.bmuschko.tomcat' version '2.5'
+}
+
+group = 'org.jodconverter'
 description = 'JODConverter - Sample Web Application'
 
-buildscript {
-  ext {
-    // Latest version https://plugins.gradle.org/plugin/com.bmuschko.tomcat
-    gradleTomcatVersion = '2.4.1'
-  }
-  repositories {
-    mavenCentral()
-  }
-
-  dependencies {
-    classpath "com.bmuschko:gradle-tomcat-plugin:${gradleTomcatVersion}"
-  }
+ext {
+    commonsFileUploadVersion = '1.4'
+    springBootVersion = '2.2.4.RELEASE'
 }
 
-apply plugin: 'war'
-apply plugin: 'eclipse'
-apply plugin: 'com.bmuschko.tomcat'
-
-sourceCompatibility = 1.8
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 repositories {
-  mavenCentral()
-}
-
-ext {
-  // Latets version: https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-core
-  tomcatVersion = '9.0.1'
+    mavenCentral()
 }
 
 dependencies {
-  compile project(':jodconverter-local')
-  compile libraries.commons_fileupload
+    implementation project(":jodconverter-local")
 
-  providedCompile libraries.servlet_api
-  
-  tomcat "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}"
-  tomcat "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
+    implementation "commons-fileupload:commons-fileupload:$commonsFileUploadVersion"
+    implementation "org.slf4j:slf4j-api"
+
+    compileOnly "javax.servlet:javax.servlet-api"
+
+    runtimeOnly "org.slf4j:slf4j-log4j12"
+
+    tomcat "org.apache.tomcat.embed:tomcat-embed-core"
+    tomcat "org.apache.tomcat.embed:tomcat-embed-jasper"
 }
 
 tomcat {
-  httpProtocol = 'org.apache.coyote.http11.Http11Nio2Protocol'
-  ajpProtocol  = 'org.apache.coyote.ajp.AjpNio2Protocol'
+    httpProtocol = "org.apache.coyote.http11.Http11Nio2Protocol"
+    ajpProtocol = "org.apache.coyote.ajp.AjpNio2Protocol"
 }
