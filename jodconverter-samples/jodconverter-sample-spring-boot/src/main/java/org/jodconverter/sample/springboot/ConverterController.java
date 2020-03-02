@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -30,17 +30,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import org.jodconverter.DocumentConverter;
-import org.jodconverter.document.DefaultDocumentFormatRegistry;
-import org.jodconverter.document.DocumentFormat;
-import org.jodconverter.office.OfficeException;
+import org.jodconverter.core.DocumentConverter;
+import org.jodconverter.core.document.DefaultDocumentFormatRegistry;
+import org.jodconverter.core.document.DocumentFormat;
+import org.jodconverter.core.office.OfficeException;
 
+/** Controller providing conversion endpoints. */
 @Controller
 public class ConverterController {
 
@@ -49,13 +51,22 @@ public class ConverterController {
 
   @Autowired private DocumentConverter converter;
 
+  @SuppressWarnings("SameReturnValue")
   @GetMapping("/")
-  public String index() {
+  /* default */ String index() {
     return "converter";
   }
 
+  /**
+   * Converts a souirce file to a target format.
+   *
+   * @param inputFile Source file to convert.
+   * @param outputFormat Output format of the conversion.
+   * @param redirectAttributes Model that contains attributes
+   * @return The converted file, or the error redirection if an error occurs.
+   */
   @PostMapping("/converter")
-  public Object convert(
+  /* default */ Object convert(
       @RequestParam("inputFile") final MultipartFile inputFile,
       @RequestParam(name = "outputFormat", required = false) final String outputFormat,
       final RedirectAttributes redirectAttributes) {
@@ -77,14 +88,8 @@ public class ConverterController {
 
       final DocumentFormat targetFormat =
           DefaultDocumentFormatRegistry.getFormatByExtension(outputFormat);
-      converter
-          .convert(inputFile.getInputStream())
-          .as(
-              DefaultDocumentFormatRegistry.getFormatByExtension(
-                  FilenameUtils.getExtension(inputFile.getOriginalFilename())))
-          .to(baos)
-          .as(targetFormat)
-          .execute();
+      Assert.notNull(targetFormat, "targetFormat must not be null");
+      converter.convert(inputFile.getInputStream()).to(baos).as(targetFormat).execute();
 
       final HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.parseMediaType(targetFormat.getMediaType()));

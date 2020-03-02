@@ -1,23 +1,87 @@
 language: java
 
-sudo: required
-
-dist: trusty
-
-matrix:
+jobs:
   include:
+    #linux Java8
     - os: linux
+      dist: trusty
       jdk: oraclejdk8
-      before_install:
-       - chmod +x ./gradlew
-       - sudo apt-get install libreoffice
       script:
-       - ./gradlew build
+        - ./gradlew build --stacktrace
       after_success:
-       - ./gradlew coveralls
+        - ./gradlew coveralls
+    #linux Java11
+    - os: linux
+      dist: trusty
+      jdk: openjdk11
+      script:
+        - ./gradlew build -x javadoc --stacktrace
+    #linux Java12
+    - os: linux
+      dist: trusty
+      jdk: openjdk12
+      script:
+        - ./gradlew build -x javadoc --stacktrace
+    #linux Java13
+    - os: linux
+      dist: trusty
+      jdk: openjdk13
+      script:
+        - ./gradlew build -x javadoc --stacktrace
+
+    #macos - see https://docs.travis-ci.com/user/reference/osx/#jdk-and-macos
+
+    #macos Java8
     - os: osx
       osx_image: xcode8
-      before_install:
-       - chmod +x ./gradlew
+      jdk: oraclejdk8
       script:
-       - ./gradlew build -x check
+       - ./gradlew build -x javadoc --stacktrace
+    #macos Java11
+    - os: osx
+      osx_image: xcode10.1
+      jdk: openjdk11
+      script:
+       - ./gradlew build -x javadoc --stacktrace
+    #macos Java12
+    - os: osx
+      osx_image: xcode11
+      jdk: openjdk12
+      script:
+       - ./gradlew build -x javadoc --stacktrace
+    #macos Java13
+    - os: osx
+      osx_image: xcode11.3
+      jdk: openjdk13
+      script:
+       - ./gradlew build -x javadoc --stacktrace
+
+before_install:
+  - |
+    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      # The following uses latest LO version. Without this, the tests would
+      # be executed using an older LO version (4.2.8.2 as of 2020-01-14)
+      # sudo add-apt-repository ppa:libreoffice/libreoffice-5-4
+      # sudo add-apt-repository ppa:libreoffice/libreoffice-4-2
+      sudo add-apt-repository -y ppa:libreoffice/ppa
+      sudo apt-get -q update
+    fi
+  - |
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+      brew update
+      # brew update && brew upgrade brew-cask
+      # brew update && brew upgrade brew-cask && brew cleanup && brew cask cleanup
+    fi
+
+install:
+  - |
+    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      sudo apt-get -y install libreoffice
+    fi
+  - |
+    if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+      brew cask install libreoffice
+    fi
+
+before_script:
+  - chmod +x ./gradlew

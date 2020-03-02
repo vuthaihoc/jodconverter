@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -22,7 +22,7 @@ package org.jodconverter.sample.webapp;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import org.jodconverter.office.OfficeException;
+import org.jodconverter.core.office.OfficeException;
 
 @SuppressWarnings("PMD")
 public class WebappContextListener implements ServletContextListener {

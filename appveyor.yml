@@ -4,30 +4,45 @@ version: "{build}"
 init:
   - git config --global core.autocrlf true
 
-# build artifacts
+# Build artifacts
 build_script:
-  - gradlew.bat assemble --info --no-daemon
+  - gradlew.bat assemble -x javadoc
 
-# verify artifacts
+# Verify artifacts
 test_script:
-  - gradlew.bat check -x integTest --info --no-daemon
+  - gradlew.bat check -x integTest
 
-# branches to build
+# Branches to build
 branches:
   only:
     - master
 
-# preserve dependencies between builds
+# Preserve dependencies between builds
 cache:
   - C:\Users\appveyor\.gradle
 
-# enviroment settings
+# Environment settings
 environment:
   matrix:
-  # don't let this fool you, we still build to target java7
+  # jdk 1.8
   - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+  # jdk 11
+  - JAVA_HOME: C:\Program Files\Java\jdk11
+  # jdk 12
+  - JAVA_HOME: C:\Program Files\Java\jdk12
+  # jdk 13
+  - JAVA_HOME: C:\Program Files\Java\jdk13
 
-# failing jobs settings
+# Failing jobs settings
 matrix:
-  # immediately finish build once one of the jobs fails
+  # Immediately finish build once one of the jobs fails
   fast_finish: true
+
+on_failure:
+  - cmd: set
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-cli\build\tmp\javadoc\javadoc.options"
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-core\build\tmp\javadoc\javadoc.options"
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-local\build\tmp\javadoc\javadoc.options"
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-remote\build\tmp\javadoc\javadoc.options"
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-spring\build\tmp\javadoc\javadoc.options"
+  - cmd: type "%APPVEYOR_BUILD_FOLDER%\jodconverter-spring-boot-starter\build\tmp\javadoc\javadoc.options"

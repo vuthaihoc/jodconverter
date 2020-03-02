@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -36,7 +36,7 @@ import java.util.Stack;
  * @author Remy Maucherat
  * @author Glenn L. Nielsen
  */
-@SuppressWarnings("PMD")
+@SuppressWarnings({"PMD", "NullableProblems"})
 public class SystemLogHandler extends PrintStream {
 
   // ----------------------------------------------------- Instance Variables
@@ -66,7 +66,7 @@ public class SystemLogHandler extends PrintStream {
 
   /** Start capturing thread's output. */
   public static void startCapture() {
-    CaptureLog log = null;
+    CaptureLog log;
     if (!reuse.isEmpty()) {
       try {
         log = reuse.pop();

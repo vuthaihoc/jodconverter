@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -21,7 +21,6 @@ package org.jodconverter.cli;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,26 +35,28 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
-import org.jodconverter.LocalConverter;
-import org.jodconverter.OnlineConverter;
-import org.jodconverter.document.DocumentFormatRegistry;
-import org.jodconverter.document.JsonDocumentFormatRegistry;
-import org.jodconverter.filter.FilterChain;
-import org.jodconverter.office.LocalOfficeManager;
-import org.jodconverter.office.OfficeManager;
-import org.jodconverter.office.OfficeUtils;
-import org.jodconverter.office.OnlineOfficeManager;
-import org.jodconverter.ssl.SslConfig;
+import org.jodconverter.core.document.DocumentFormatRegistry;
+import org.jodconverter.core.document.JsonDocumentFormatRegistry;
+import org.jodconverter.core.office.OfficeManager;
+import org.jodconverter.core.office.OfficeUtils;
+import org.jodconverter.local.LocalConverter;
+import org.jodconverter.local.filter.FilterChain;
+import org.jodconverter.local.office.LocalOfficeManager;
+import org.jodconverter.remote.RemoteConverter;
+import org.jodconverter.remote.office.RemoteOfficeManager;
+import org.jodconverter.remote.ssl.SslConfig;
 
 /** Command line interface executable. */
 public final class Convert {
 
   public static final int STATUS_OK = 0;
-  public static final int STATUS_MISSING_INPUT_FILE = 1;
+  // public static final int STATUS_MISSING_INPUT_FILE = 1;
+  public static final int STATUS_ERROR = 2;
   public static final int STATUS_INVALID_ARGUMENTS = 255;
 
   private static final Option OPT_APPLICATION_CONTEXT =
@@ -162,30 +163,31 @@ public final class Convert {
 
     if (commandLine.hasOption(OPT_HELP.getOpt())) {
       printHelp();
-      System.exit(0);
+      System.exit(STATUS_OK);
     }
 
     if (commandLine.hasOption(OPT_VERSION.getOpt())) {
       final Package pack = Convert.class.getPackage();
       printInfo("jodconverter-cli version %s", pack.getImplementationVersion());
-      System.exit(0);
+      System.exit(STATUS_OK);
     }
   }
 
   private static OfficeManager createOfficeManager(
       final CommandLine commandLine, final AbstractApplicationContext context) {
 
-    // If the URL is present, we will use the online office manager and thus,
+    // If the URL is present, we will use the remote office manager and thus,
     // an office installation won't be required locally.
     if (commandLine.hasOption(OPT_CONNECTION_URL.getOpt())) {
       final String connectionUrl = getStringOption(commandLine, OPT_CONNECTION_URL.getOpt());
-      return OnlineOfficeManager.builder()
+      assert connectionUrl != null;
+      return RemoteOfficeManager.builder()
           .urlConnection(connectionUrl)
           .sslConfig(context == null ? null : context.getBean(SslConfig.class))
           .build();
     }
 
-    // Not online conversion...
+    // Not remote conversion...
 
     final LocalOfficeManager.Builder builder = LocalOfficeManager.builder();
 
@@ -217,6 +219,7 @@ public final class Convert {
     return builder.install().build();
   }
 
+  @Nullable
   private static AbstractApplicationContext getApplicationContextOption(
       final CommandLine commandLine) {
 
@@ -229,11 +232,13 @@ public final class Convert {
     return null;
   }
 
+  @Nullable
   private static FilterChain getFilterChain(final ApplicationContext context) {
 
     return Optional.ofNullable(context).map(ctx -> ctx.getBean(FilterChain.class)).orElse(null);
   }
 
+  @Nullable
   private static DocumentFormatRegistry getRegistryOption(final CommandLine commandLine)
       throws IOException {
 
@@ -246,6 +251,7 @@ public final class Convert {
     return null;
   }
 
+  @Nullable
   private static String getStringOption(final CommandLine commandLine, final String option) {
 
     if (commandLine.hasOption(option)) {
@@ -348,22 +354,23 @@ public final class Convert {
         }
       }
 
-      System.exit(0);
+      System.exit(STATUS_OK);
 
     } catch (ParseException e) {
-      printErr("jodconverter-cli: %s", e.getMessage());
+      printErr(e.getMessage());
       printHelp();
-      System.exit(2);
-    } catch (Exception e) { // NOSONAR
-      printErr("jodconverter-cli: %s", e.getMessage());
-      e.printStackTrace(System.err); // NOSONAR
-      System.exit(2);
+      System.exit(STATUS_ERROR);
+    } catch (Exception e) {
+      printErr(e.getMessage());
+      e.printStackTrace(System.err);
+      System.exit(STATUS_ERROR);
     }
   }
 
+  @Nullable
   private static Map<String, Object> toMap(final String... options) {
 
-    if (options == null || options.length == 0 || options.length % 2 != 0) {
+    if (options.length % 2 != 0) {
       return null;
     }
 
@@ -377,7 +384,7 @@ public final class Convert {
                   final String val = options[i + 1];
                   final Boolean bool = BooleanUtils.toBooleanObject(val);
                   if (bool != null) {
-                    return bool.booleanValue();
+                    return bool;
                   }
                   try {
                     return Integer.parseInt(val);
@@ -387,13 +394,17 @@ public final class Convert {
                 }));
   }
 
-  private static Map<String, Object> buildProperties(final String... args) {
+  @Nullable
+  private static Map<String, Object> buildProperties(@Nullable final String... args) {
 
     if (args == null || args.length == 0) {
       return null;
     }
 
     final Map<String, Object> argsMap = toMap(args);
+    if (argsMap == null) {
+      return null;
+    }
 
     final Map<String, Object> properties = new HashMap<>();
     final Map<String, Object> filterDataProperties = new HashMap<>();
@@ -416,15 +427,21 @@ public final class Convert {
       final CommandLine commandLine,
       final AbstractApplicationContext context,
       final OfficeManager officeManager,
-      final DocumentFormatRegistry registry) {
+      @Nullable final DocumentFormatRegistry registry) {
 
     if (commandLine.hasOption(OPT_CONNECTION_URL.getOpt())) {
-      return new CliConverter(
-          OnlineConverter.builder().officeManager(officeManager).formatRegistry(registry).build());
+      final RemoteConverter.Builder builder =
+          RemoteConverter.builder().officeManager(officeManager);
+      if (registry != null) {
+        builder.formatRegistry(registry);
+      }
+      return new CliConverter(builder.build());
     }
 
-    final LocalConverter.Builder builder =
-        LocalConverter.builder().officeManager(officeManager).formatRegistry(registry);
+    final LocalConverter.Builder builder = LocalConverter.builder().officeManager(officeManager);
+    if (registry != null) {
+      builder.formatRegistry(registry);
+    }
 
     // Specify custom load properties if required
     final Map<String, Object> loadProperties =
@@ -460,17 +477,15 @@ public final class Convert {
             OPTIONS);
   }
 
-  private static void printErr(final String message, final Object... values) {
+  private static void printErr(final Object... values) {
 
-    final PrintWriter writer = new PrintWriter(System.err); // NOSONAR
-    writer.println(String.format(message, values));
-    writer.flush();
+    System.err.println(String.format("jodconverter-cli: %s", values));
+    System.err.flush();
   }
 
   private static void printInfo(final String message, final Object... values) {
 
-    final PrintWriter writer = new PrintWriter(System.out); // NOSONAR
-    writer.println(String.format(message, values));
-    writer.flush();
+    System.out.println(String.format(message, values));
+    System.out.flush();
   }
 }

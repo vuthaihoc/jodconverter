@@ -1,5 +1,6 @@
 # <img src="https://github.com/sbraconnier/jodconverter/wiki/images/jodconverter_w200.png">&nbsp;<sup>&nbsp;LibreOffice</sup>&nbsp;/&nbsp;<sub>Apache OpenOffice</sub>
 
+[![Build Status](https://api.cirrus-ci.com/github/sbraconnier/jodconverter.svg)](https://cirrus-ci.com/github/sbraconnier/jodconverter)
 [![Build status](https://ci.appveyor.com/api/projects/status/mvn8oqr2m8xorslk?svg=true)](https://ci.appveyor.com/project/sbraconnier/jodconverter)
 [![Build Status](https://travis-ci.org/sbraconnier/jodconverter.svg?branch=master)](https://travis-ci.org/sbraconnier/jodconverter)
 [![Coverage Status](https://coveralls.io/repos/github/sbraconnier/jodconverter/badge.svg?branch=master)](https://coveralls.io/github/sbraconnier/jodconverter?branch=master)
@@ -21,7 +22,7 @@ I created this fork because I had to do some changes to the original project and
 
 #### Gradle:
 ```Shell
-compile 'org.jodconverter:jodconverter-local:4.2.2'
+compile 'org.jodconverter:jodconverter-local:4.2.4'
 ```
 
 #### Maven:
@@ -29,20 +30,22 @@ compile 'org.jodconverter:jodconverter-local:4.2.2'
 <dependency>
   <groupId>org.jodconverter</groupId>
   <artifactId>jodconverter-local</artifactId>
-  <version>4.2.2</version>
+  <version>4.2.4</version>
 </dependency>
 ```
 
 ### Building the Project
 
-#### With LibreOffice libraries:
+Build default, JODConverter is built using the OpenOffice libraries. See [here](https://github.com/sbraconnier/jodconverter/issues/113) to know why. Bu you can build the project using the LibreOffice libraries with the `useLibreOffice` argument.
+
+#### With OpenOffice libraries:
 ```Shell
 gradlew clean build -x test
 ```
 
-#### With OpenOffice libraries:
+#### With LibreOffice libraries:
 ```Shell
-gradlew clean build -x test -PuseOpenOffice
+gradlew clean build -x test -PuseLibreOffice
 ```
 
 ### Building Cli Executable

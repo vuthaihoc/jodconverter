@@ -1,6 +1,6 @@
 /*
  * Copyright 2004 - 2012 Mirko Nasato and contributors
- *           2016 - 2018 Simon Braconnier and contributors
+ *           2016 - 2020 Simon Braconnier and contributors
  *
  * This file is part of JODConverter - Java OpenDocument Converter.
  *
@@ -28,38 +28,37 @@ import java.util.Map;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.powermock.reflect.Whitebox;
 
-import org.jodconverter.LocalConverter;
-import org.jodconverter.cli.util.ConsoleStreamsListener;
+import org.jodconverter.cli.util.ConsoleStreamsListenerExtension;
 import org.jodconverter.cli.util.ExitException;
-import org.jodconverter.cli.util.NoExitResource;
-import org.jodconverter.cli.util.ResetExitExceptionResource;
+import org.jodconverter.cli.util.NoExitExtension;
+import org.jodconverter.cli.util.ResetExitExceptionExtension;
 import org.jodconverter.cli.util.SystemLogHandler;
-import org.jodconverter.office.OfficeManager;
+import org.jodconverter.core.office.OfficeManager;
+import org.jodconverter.local.LocalConverter;
 
+/** Contains tests for the {@link Convert} class. */
+@ExtendWith({
+  ConsoleStreamsListenerExtension.class,
+  NoExitExtension.class,
+  ResetExitExceptionExtension.class
+})
 public class ConvertTest {
-
-  @ClassRule public static NoExitResource noExit = new NoExitResource();
-  @ClassRule public static ConsoleStreamsListener consoleListener = new ConsoleStreamsListener();
-
-  @Rule public ResetExitExceptionResource resetExitEx = new ResetExitExceptionResource();
 
   private static OfficeManager officeManager;
 
   /** Setup the office manager once before all tests. */
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() {
-
     officeManager = mock(OfficeManager.class);
   }
 
   @Test
-  public void main_WithOptionHelp_PrintHelpAndExitWithCode0() throws Exception {
+  public void main_WithOptionHelp_PrintHelpAndExitWithCode0() {
 
     try {
       SystemLogHandler.startCapture();
@@ -76,7 +75,7 @@ public class ConvertTest {
   }
 
   @Test
-  public void main_WithOptionHelp_PrintVersionAndExitWithCode0() throws Exception {
+  public void main_WithOptionHelp_PrintVersionAndExitWithCode0() {
 
     try {
       SystemLogHandler.startCapture();
@@ -92,7 +91,7 @@ public class ConvertTest {
   }
 
   @Test
-  public void main_WithUnknownArgument_PrintErrorHelpAndExitWithCode2() throws Exception {
+  public void main_WithUnknownArgument_PrintErrorHelpAndExitWithCode2() {
 
     try {
       SystemLogHandler.startCapture();
@@ -111,7 +110,7 @@ public class ConvertTest {
   }
 
   @Test
-  public void main_WithMissingsFilenames_PrintErrorHelpAndExitWithCode255() throws Exception {
+  public void main_WithMissingsFilenames_PrintErrorHelpAndExitWithCode255() {
 
     try {
       SystemLogHandler.startCapture();
@@ -128,7 +127,7 @@ public class ConvertTest {
   }
 
   @Test
-  public void main_WithWrongFilenamesLength_PrintErrorHelpAndExitWithCode255() throws Exception {
+  public void main_WithWrongFilenamesLength_PrintErrorHelpAndExitWithCode255() {
 
     try {
       SystemLogHandler.startCapture();
@@ -151,23 +150,19 @@ public class ConvertTest {
     final CommandLine commandLine =
         new DefaultParser()
             .parse(
-                (Options) Whitebox.getFieldValue(Whitebox.getField(Convert.class, "OPTIONS"), null),
+                (Options) Whitebox.getField(Convert.class, "OPTIONS").get(null),
                 new String[] {"-lPassword=myPassword", "output1.pdf", "input2.txt"});
 
     final CliConverter cliConverter =
-        (CliConverter)
-            Whitebox.invokeMethod(
-                Convert.class, "createCliConverter", commandLine, null, officeManager, null);
+        Whitebox.invokeMethod(
+            Convert.class, "createCliConverter", commandLine, null, officeManager, null);
     final LocalConverter localConverter =
-        (LocalConverter)
-            (LocalConverter)
-                Whitebox.getFieldValue(
-                    Whitebox.getField(CliConverter.class, "converter"), cliConverter);
+        (LocalConverter) Whitebox.getField(CliConverter.class, "converter").get(cliConverter);
 
     final Map<String, Object> expectedLoadProperties =
         new HashMap<>(LocalConverter.DEFAULT_LOAD_PROPERTIES);
     expectedLoadProperties.put("Password", "myPassword");
-    assertThat(localConverter).extracting("loadProperties").containsExactly(expectedLoadProperties);
+    assertThat(localConverter).extracting("loadProperties").isEqualTo(expectedLoadProperties);
   }
 
   @Test
@@ -178,26 +173,20 @@ public class ConvertTest {
     final CommandLine commandLine =
         new DefaultParser()
             .parse(
-                (Options) Whitebox.getFieldValue(Whitebox.getField(Convert.class, "OPTIONS"), null),
+                (Options) Whitebox.getField(Convert.class, "OPTIONS").get(null),
                 new String[] {"-sFDPageRange=2-2", "output1.pdf", "input2.txt"});
 
     final CliConverter cliConverter =
-        (CliConverter)
-            Whitebox.invokeMethod(
-                Convert.class, "createCliConverter", commandLine, null, officeManager, null);
+        Whitebox.invokeMethod(
+            Convert.class, "createCliConverter", commandLine, null, officeManager, null);
     final LocalConverter localConverter =
-        (LocalConverter)
-            (LocalConverter)
-                Whitebox.getFieldValue(
-                    Whitebox.getField(CliConverter.class, "converter"), cliConverter);
+        (LocalConverter) Whitebox.getField(CliConverter.class, "converter").get(cliConverter);
 
     final Map<String, Object> expectedFilterData = new HashMap<>();
     expectedFilterData.put("PageRange", "2-2");
     final Map<String, Object> expectedStoreProperties = new HashMap<>();
     expectedStoreProperties.put("FilterData", expectedFilterData);
-    assertThat(localConverter)
-        .extracting("storeProperties")
-        .containsExactly(expectedStoreProperties);
+    assertThat(localConverter).extracting("storeProperties").isEqualTo(expectedStoreProperties);
   }
 
   @Test
@@ -207,24 +196,18 @@ public class ConvertTest {
     final CommandLine commandLine =
         new DefaultParser()
             .parse(
-                (Options) Whitebox.getFieldValue(Whitebox.getField(Convert.class, "OPTIONS"), null),
+                (Options) Whitebox.getField(Convert.class, "OPTIONS").get(null),
                 new String[] {"-sOverwrite=true", "output1.pdf", "input2.txt"});
 
     final CliConverter cliConverter =
-        (CliConverter)
-            Whitebox.invokeMethod(
-                Convert.class, "createCliConverter", commandLine, null, officeManager, null);
+        Whitebox.invokeMethod(
+            Convert.class, "createCliConverter", commandLine, null, officeManager, null);
     final LocalConverter localConverter =
-        (LocalConverter)
-            (LocalConverter)
-                Whitebox.getFieldValue(
-                    Whitebox.getField(CliConverter.class, "converter"), cliConverter);
+        (LocalConverter) Whitebox.getField(CliConverter.class, "converter").get(cliConverter);
 
     final Map<String, Object> expectedStoreProperties = new HashMap<>();
     expectedStoreProperties.put("Overwrite", true);
-    assertThat(localConverter)
-        .extracting("storeProperties")
-        .containsExactly(expectedStoreProperties);
+    assertThat(localConverter).extracting("storeProperties").isEqualTo(expectedStoreProperties);
   }
 
   @Test
@@ -235,33 +218,47 @@ public class ConvertTest {
     final CommandLine commandLine =
         new DefaultParser()
             .parse(
-                (Options) Whitebox.getFieldValue(Whitebox.getField(Convert.class, "OPTIONS"), null),
+                (Options) Whitebox.getField(Convert.class, "OPTIONS").get(null),
                 new String[] {
                   "-sOverwrite=true",
                   "-sFDPageRange=2-4",
                   "-sFDIntProp=5",
+                  "-sFD=NotFilterData",
                   "output1.pdf",
                   "input2.txt"
                 });
 
     final CliConverter cliConverter =
-        (CliConverter)
-            Whitebox.invokeMethod(
-                Convert.class, "createCliConverter", commandLine, null, officeManager, null);
+        Whitebox.invokeMethod(
+            Convert.class, "createCliConverter", commandLine, null, officeManager, null);
     final LocalConverter localConverter =
-        (LocalConverter)
-            (LocalConverter)
-                Whitebox.getFieldValue(
-                    Whitebox.getField(CliConverter.class, "converter"), cliConverter);
+        (LocalConverter) Whitebox.getField(CliConverter.class, "converter").get(cliConverter);
 
     final Map<String, Object> expectedFilterData = new HashMap<>();
     expectedFilterData.put("PageRange", "2-4");
     expectedFilterData.put("IntProp", 5);
     final Map<String, Object> expectedStoreProperties = new HashMap<>();
     expectedStoreProperties.put("Overwrite", true);
+    expectedStoreProperties.put("FD", "NotFilterData");
     expectedStoreProperties.put("FilterData", expectedFilterData);
-    assertThat(localConverter)
-        .extracting("storeProperties")
-        .containsExactly(expectedStoreProperties);
+    assertThat(localConverter).extracting("storeProperties").isEqualTo(expectedStoreProperties);
+  }
+
+  @Test
+  public void createCliConverter_WithBadLoadProperties_BadLoadPropertiesIgnored() throws Exception {
+
+    final CommandLine commandLine =
+        new DefaultParser()
+            .parse(
+                (Options) Whitebox.getField(Convert.class, "OPTIONS").get(null),
+                new String[] {"-lPassword", "output1.pdf", "input2.txt"});
+
+    final CliConverter cliConverter =
+        Whitebox.invokeMethod(
+            Convert.class, "createCliConverter", commandLine, null, officeManager, null);
+    final LocalConverter localConverter =
+        (LocalConverter) Whitebox.getField(CliConverter.class, "converter").get(cliConverter);
+
+    assertThat(localConverter).extracting("loadProperties").isEqualTo(null);
   }
 }
